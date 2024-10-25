@@ -1,0 +1,20 @@
+<!-- Info.plist -->
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>CFBundleName</key>
+    <string>LiveLocationTracking</string>
+
+    <!-- Google Maps API Key -->
+    <key>GMSApiKey</key>
+    <string>$(API_KEY)</string>
+
+    <!-- Privacy settings for location permissions -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>We need access to your location to show your position on the map.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>We need access to your location to track your movements even when the app is in the background.</string>
+  </dict>
+</plist>

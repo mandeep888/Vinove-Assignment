@@ -1,0 +1,37 @@
+// app/build.gradle
+
+def keyProperties = new Properties()
+def keyPropertiesFile = rootProject.file('../../key.properties')
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(new FileInputStream(keyPropertiesFile))
+}
+
+android {
+    compileSdkVersion 33
+    defaultConfig {
+        applicationId "com.example.live_location_tracking"
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Inject MAPS API Key from key.properties
+        manifestPlaceholders = [MAPS_API_KEY_ANDROID: keyProperties['MAPS_API_KEY_ANDROID']]
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.google.android.gms:play-services-maps:18.0.2'
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
+}
+

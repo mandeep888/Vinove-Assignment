@@ -1,0 +1,25 @@
+name: live_location_tracking
+description: A Flutter project for live location tracking and viewing history.
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_dotenv: ^5.0.2 
+  google_maps_flutter: ^2.9.0
+  flutter_polyline_points: ^2.1.0
+  google_maps_services_dart: ^1.17.1 
+  google_maps_webservice: ^0.0.19
+  geolocator: ^13.0.1
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  assets:
+    - assets/
+  uses-material-design: true
