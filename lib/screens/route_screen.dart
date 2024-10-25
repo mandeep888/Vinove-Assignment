@@ -1,8 +1,10 @@
 // lib/screens/route_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_services_dart/google_maps_services_dart.dart'; // Adjusted if needed
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps; // Prefixed import
+import 'package:google_maps_webservice/directions.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart'; // Use this for polyline points
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class RouteScreen extends StatefulWidget {
   @override
@@ -10,88 +12,91 @@ class RouteScreen extends StatefulWidget {
 }
 
 class _RouteScreenState extends State<RouteScreen> {
-  late GoogleMapController mapController;
-  Set<Polyline> _polylines = {};
-  List<LatLng> polylineCoordinates = [];
-  final PolylinePoints polylinePoints = PolylinePoints();
+  late gmaps.GoogleMapController mapController; // Using the prefixed class
+  Set<gmaps.Polyline> _polylines = {};
+  final gmaps.LatLng _startLocation = gmaps.LatLng(37.7749, -122.4194); // San Francisco
+  final gmaps.LatLng _endLocation = gmaps.LatLng(37.7849, -122.4094); // Another location in SF
 
-  // Replace with your actual Google Maps API Key
-  final String googleApiKey = "YOUR_GOOGLE_API_KEY"; // Store this securely
+  @override
+  void initState() {
+    super.initState();
+    _getRoute();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Route Screen')),
-      body: GoogleMap(
+      body: gmaps.GoogleMap( // Using the prefixed class
         onMapCreated: _onMapCreated,
-        initialCameraPosition: CameraPosition(
-          target: LatLng(37.7749, -122.4194), // San Francisco coordinates
+        initialCameraPosition: gmaps.CameraPosition( // Using the prefixed class
+          target: _startLocation,
           zoom: 14.0,
         ),
         polylines: _polylines,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _getPolyline,
-        child: Icon(Icons.directions),
-      ),
     );
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(gmaps.GoogleMapController controller) {
     mapController = controller;
   }
 
-  Future<void> _getPolyline() async {
-    // Start and end coordinates for the route
-    LatLng startLocation = LatLng(37.7749, -122.4194); // San Francisco
-    LatLng endLocation = LatLng(37.7849, -122.4094); // Another location in SF
+  Future<void> _getRoute() async {
+    final googleApiKey = dotenv.env['GOOGLE_API_KEY']; // Load API key from .env file
 
-    // Getting the route between the two locations
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      googleApiKey,
-      PointLatLng(startLocation.latitude, startLocation.longitude),
-      PointLatLng(endLocation.latitude, endLocation.longitude),
+    // Create an instance of the Directions API
+    final directions = GoogleMapsDirections(apiKey: googleApiKey!);
+
+    // Get directions from start to end location
+    final response = await directions.getDirections(
+      Location(lat: _startLocation.latitude, lng: _startLocation.longitude),
+      Location(lat: _endLocation.latitude, lng: _endLocation.longitude),
     );
 
-    if (result.points.isNotEmpty) {
-      polylineCoordinates.clear(); // Clear previous points
-      result.points.forEach((PointLatLng point) {
-        polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-      });
+    if (response.isOkay) {
+      // Extract polyline points from the response
+      final points = response.routes.first.legs.first.steps.map((step) {
+        return PolylinePoints.decodePolyline(step.polyline.points);
+      }).expand((x) => x).toList();
 
+      // Create a polyline from the points
       setState(() {
-        _polylines.add(Polyline(
-          polylineId: PolylineId('route'),
+        _polylines.add(gmaps.Polyline( // Using the prefixed class
+          polylineId: gmaps.PolylineId('route'), // Using the prefixed class
           color: Colors.blue,
-          points: polylineCoordinates,
+          points: points,
           width: 4,
         ));
       });
 
       // Move the camera to the start location
       mapController.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          LatLngBounds(
-            southwest: LatLng(
-              startLocation.latitude < endLocation.latitude
-                  ? startLocation.latitude
-                  : endLocation.latitude,
-              startLocation.longitude < endLocation.longitude
-                  ? startLocation.longitude
-                  : endLocation.longitude,
+        gmaps.CameraUpdate.newLatLngBounds( // Using the prefixed class
+          gmaps.LatLngBounds(
+            southwest: gmaps.LatLng(
+              _startLocation.latitude < _endLocation.latitude
+                  ? _startLocation.latitude
+                  : _endLocation.latitude,
+              _startLocation.longitude < _endLocation.longitude
+                  ? _startLocation.longitude
+                  : _endLocation.longitude,
             ),
-            northeast: LatLng(
-              startLocation.latitude > endLocation.latitude
-                  ? startLocation.latitude
-                  : endLocation.latitude,
-              startLocation.longitude > endLocation.longitude
-                  ? startLocation.longitude
-                  : endLocation.longitude,
+            northeast: gmaps.LatLng(
+              _startLocation.latitude > _endLocation.latitude
+                  ? _startLocation.latitude
+                  : _endLocation.latitude,
+              _startLocation.longitude > _endLocation.longitude
+                  ? _startLocation.longitude
+                  : _endLocation.longitude,
             ),
           ),
           100, // Padding
         ),
       );
+    } else {
+      // Handle errors, e.g., show a message to the user
+      print('Error getting directions: ${response.errorMessage}');
     }
   }
 }
