@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:live_location_tracking/screens/attendance_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async{
+Future<void> main() async {
+  // Ensures Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   runApp(MyApp());
 }
@@ -48,13 +50,18 @@ class AppDrawer extends StatelessWidget {
           ListTile(
             leading: Icon(Icons.timer),
             title: Text('Timer'),
-            onTap: () {},
+            onTap: () {
+              // Add implementation for Timer
+            },
           ),
           ListTile(
             leading: Icon(Icons.assignment),
             title: Text('Attendance'),
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => AttendanceScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AttendanceScreen()),
+              );
             },
           ),
         ],

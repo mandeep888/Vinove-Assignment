@@ -1,10 +1,11 @@
 // lib/screens/route_screen.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps; // Prefixed import
-import 'package:google_maps_webservice/directions.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart'; // Use this for polyline points
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 
 class RouteScreen extends StatefulWidget {
   @override
@@ -45,58 +46,65 @@ class _RouteScreenState extends State<RouteScreen> {
   Future<void> _getRoute() async {
     final googleApiKey = dotenv.env['GOOGLE_API_KEY']; // Load API key from .env file
 
-    // Create an instance of the Directions API
-    final directions = GoogleMapsDirections(apiKey: googleApiKey!);
+    // Construct the URL for the Google Directions API
+    final url =
+        'https://maps.googleapis.com/maps/api/directions/json?origin=${_startLocation.latitude},${_startLocation.longitude}&destination=${_endLocation.latitude},${_endLocation.longitude}&key=$googleApiKey';
 
-    // Get directions from start to end location
-    final response = await directions.getDirections(
-      Location(lat: _startLocation.latitude, lng: _startLocation.longitude),
-      Location(lat: _endLocation.latitude, lng: _endLocation.longitude),
-    );
+    // Make the HTTP request
+    final response = await http.get(Uri.parse(url));
 
-    if (response.isOkay) {
-      // Extract polyline points from the response
-      final points = response.routes.first.legs.first.steps.map((step) {
-        return PolylinePoints.decodePolyline(step.polyline.points);
-      }).expand((x) => x).toList();
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['status'] == 'OK') {
+        // Create an instance of PolylinePoints
+        final polylinePoints = PolylinePoints();
 
-      // Create a polyline from the points
-      setState(() {
-        _polylines.add(gmaps.Polyline( // Using the prefixed class
-          polylineId: gmaps.PolylineId('route'), // Using the prefixed class
-          color: Colors.blue,
-          points: points,
-          width: 4,
-        ));
-      });
+        // Extract polyline points from the response
+        final points = data['routes'][0]['legs'][0]['steps'].map((step) {
+          return polylinePoints.decodePolyline(step['polyline']['points']);
+        }).expand((x) => x).toList();
 
-      // Move the camera to the start location
-      mapController.animateCamera(
-        gmaps.CameraUpdate.newLatLngBounds( // Using the prefixed class
-          gmaps.LatLngBounds(
-            southwest: gmaps.LatLng(
-              _startLocation.latitude < _endLocation.latitude
-                  ? _startLocation.latitude
-                  : _endLocation.latitude,
-              _startLocation.longitude < _endLocation.longitude
-                  ? _startLocation.longitude
-                  : _endLocation.longitude,
+        // Create a polyline from the points
+        setState(() {
+          _polylines.add(gmaps.Polyline(
+            polylineId: gmaps.PolylineId('route'),
+            color: Colors.blue,
+            points: points,
+            width: 4,
+          ));
+        });
+
+        // Move the camera to the start location
+        mapController.animateCamera(
+          gmaps.CameraUpdate.newLatLngBounds(
+            gmaps.LatLngBounds(
+              southwest: gmaps.LatLng(
+                _startLocation.latitude < _endLocation.latitude
+                    ? _startLocation.latitude
+                    : _endLocation.latitude,
+                _startLocation.longitude < _endLocation.longitude
+                    ? _startLocation.longitude
+                    : _endLocation.longitude,
+              ),
+              northeast: gmaps.LatLng(
+                _startLocation.latitude > _endLocation.latitude
+                    ? _startLocation.latitude
+                    : _endLocation.latitude,
+                _startLocation.longitude > _endLocation.longitude
+                    ? _startLocation.longitude
+                    : _endLocation.longitude,
+              ),
             ),
-            northeast: gmaps.LatLng(
-              _startLocation.latitude > _endLocation.latitude
-                  ? _startLocation.latitude
-                  : _endLocation.latitude,
-              _startLocation.longitude > _endLocation.longitude
-                  ? _startLocation.longitude
-                  : _endLocation.longitude,
-            ),
+            100, // Padding
           ),
-          100, // Padding
-        ),
-      );
+        );
+      } else {
+        // Handle errors, e.g., show a message to the user
+        print('Error getting directions: ${data['error_message']}');
+      }
     } else {
-      // Handle errors, e.g., show a message to the user
-      print('Error getting directions: ${response.errorMessage}');
+      // Handle HTTP request errors
+      print('HTTP error: ${response.statusCode}');
     }
   }
 }
